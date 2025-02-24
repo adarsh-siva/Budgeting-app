@@ -26,7 +26,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,13 +43,13 @@ import kotlin.text.toDoubleOrNull
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 import java.time.Instant
 import java.time.LocalDate
@@ -75,7 +74,10 @@ fun BudgetingApp() {
     var showAddDialog by remember { mutableStateOf(false) }
     var transactions by remember { mutableStateOf(transactionManager.transactions) }
     var transactionsMap by remember { mutableStateOf(transactionManager.getOrderedTransactions()) }
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var selectedTabIndex by remember { mutableIntStateOf(1) }
+    var transactionToEdit by remember { mutableStateOf<Transaction?>(null) }
+    var isAddingTransaction by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     val tabItems = listOf("Transactions", "Dashboard", "Categories")
 
     Scaffold(
@@ -114,19 +116,52 @@ fun BudgetingApp() {
             when (selectedTabIndex) {
                 0 -> TransactionList(
                     transactions = transactionsMap,
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier.padding(innerPadding),
+                    onEditTransaction = { transaction ->
+                        transactionToEdit = transaction
+                        showAddDialog = true
+                    }
                 )
                 1 -> DashboardScreen(modifier = Modifier.padding(innerPadding),transactionManager.getBalance())
                 //2 -> CategoriesScreen(modifier = Modifier.padding(innerPadding))
             }
             if (showAddDialog) {
                 AddTransactionDialog(
-                    onDismiss = { showAddDialog = false },
+                    onDismiss = {
+                        showAddDialog = false
+                        transactionToEdit = null
+                                },
                     onAddTransaction = { amount, date, name, type, category ->
-                        transactionManager.addTransaction(amount, date, name, type, category)
-                        transactions = transactionManager.transactions // Update the list
+                        if (!isAddingTransaction) {
+                            isAddingTransaction = true
+                            coroutineScope.launch {
+                                if (transactionToEdit != null) {
+                                    transactionManager.updateTransaction(
+                                        transactionToEdit!!.id,
+                                        amount,
+                                        date,
+                                        name,
+                                        type,
+                                        category
+                                    )
+                                } else {
+                                    transactionManager.addTransaction(amount, date, name, type,category)
+                                }
+                                transactions = transactionManager.transactions
+                                transactionsMap = transactionManager.getOrderedTransactions()
+                                showAddDialog = false
+                                transactionToEdit = null
+                                isAddingTransaction = false
+                            }
+                        }
+                    },
+                    transactionToEdit = transactionToEdit,
+                    onDeleteTransaction = { transaction ->
+                        transactionManager.deleteTransaction(transaction.id)
+                        transactions = transactionManager.transactions
                         transactionsMap = transactionManager.getOrderedTransactions()
                         showAddDialog = false
+                        transactionToEdit = null
                     }
                 )
             }
@@ -160,7 +195,7 @@ fun DashboardScreen(modifier: Modifier, balance: Double) {
 }
 
 @Composable
-fun TransactionList(transactions: Map<LocalDate, List<Transaction>>, modifier: Modifier = Modifier) {
+fun TransactionList(transactions: Map<LocalDate, List<Transaction>>, modifier: Modifier = Modifier, onEditTransaction: (Transaction) -> Unit) {
 
     LazyColumn(
         modifier = modifier
@@ -168,13 +203,14 @@ fun TransactionList(transactions: Map<LocalDate, List<Transaction>>, modifier: M
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+
         for((date, transactions) in transactions) {
             item {
                 dateHeader(date = date)
             }
             for(transaction in transactions) {
                 item {
-                    TransactionItem(transaction = transaction)
+                    TransactionItem(transaction = transaction,onEditTransaction = onEditTransaction)
                 }
             }
 
@@ -196,13 +232,13 @@ fun dateHeader(date: LocalDate)
 }
 
 @Composable
-fun TransactionItem(transaction: Transaction) {
+fun TransactionItem(transaction: Transaction,  onEditTransaction: (Transaction) -> Unit) {
     val backgroundColor = if (transaction.TransactionType) Color(0xFFE8F5E9) else Color(0xFFFCE4EC) // Light green for income, light red for expense
     val textColor = if (transaction.TransactionType) Color(0xFF388E3C) else Color(0xFFC62828) // Dark green for income, dark red for expense
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Handle click if needed */ },
+            .clickable { onEditTransaction(transaction) },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = backgroundColor
@@ -229,41 +265,29 @@ fun TransactionItem(transaction: Transaction) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 
-@Composable
-fun DatePickerTest()
-{
-    Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Pre-select a date for January 4, 2020
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = 1578096000000)
-        DatePicker(state = datePickerState, modifier = Modifier.padding(16.dp))
 
-        Text(
-            "Selected date timestamp: ${datePickerState.selectedDateMillis ?: "no selection"}",
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-    }
-}
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddTransactionDialog(
     onDismiss: () -> Unit,
-    onAddTransaction: (Double, LocalDate, String, Boolean, String) -> Unit
+    onAddTransaction: (Double, LocalDate, String, Boolean, String) -> Unit,
+    transactionToEdit: Transaction? = null,
+    onDeleteTransaction: ((Transaction) -> Unit)? = null
 ) {
-    var amount by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf(LocalDate.now()) }
+    var amount by remember { mutableStateOf(transactionToEdit?.amount?.toString() ?: "") }
+    var date by remember { mutableStateOf(transactionToEdit?.date ?: LocalDate.now()) }
     var formattedDate = date.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
-    var transactionName by remember { mutableStateOf("") }
-    var isIncome by remember { mutableStateOf(false) }
+    var category by remember { mutableStateOf(transactionToEdit?.category ?: "") }
+    var isIncome by remember { mutableStateOf(transactionToEdit?.TransactionType ?: false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var transactionName by remember { mutableStateOf(transactionToEdit?.name ?: "") }
     val transactionManager = remember { TransactionManager() }
     var categoryNames by remember { mutableStateOf(transactionManager.categories) }
-    var category by remember { mutableStateOf(-1) }
+    var selectedCategoryIndex by remember { mutableStateOf(categoryNames.indexOf(category).takeIf { it >= 0 } ?: 0) }
+
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     )
@@ -299,7 +323,9 @@ fun AddTransactionDialog(
 
             Row(modifier = Modifier.fillMaxWidth(),verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
 
-                var selectedIndex by remember { mutableIntStateOf(0) }
+                    var selectedIndex by remember { mutableIntStateOf(0) }
+                if(isIncome)
+                    selectedIndex = 1
                 val options = listOf("Expense", "Income")
                 SingleChoiceSegmentedButtonRow {
                     options.forEachIndexed { index, label ->
@@ -363,9 +389,9 @@ fun AddTransactionDialog(
 
                     categoryNames.forEachIndexed {index, label ->
                         InputChip(
-                            selected = category == index,
+                            selected = selectedCategoryIndex == index,
                             modifier = Modifier.padding(horizontal = 4.dp),
-                            onClick = { category = index},
+                            onClick = { selectedCategoryIndex = index},
                             label = { Text(label) }
                         )
                     }
@@ -373,20 +399,38 @@ fun AddTransactionDialog(
             }
         },
 
-        confirmButton = {
+        confirmButton = @androidx.compose.runtime.Composable {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center)
             {
+                if(transactionToEdit != null)
+                {
+                    Button(onClick = {
+                        if (onDeleteTransaction != null) {
+                            onDeleteTransaction(transactionToEdit)
+                        }
+                    }, colors = ButtonDefaults.buttonColors(Color(0xFFC62828))) {
+
+                        Text("Delete")
+                    }
+                }
+                if(transactionToEdit != null)
+                    Spacer(modifier = Modifier.width(16.dp))
                 Button(onClick = {
                     val parsedAmount = amount.toDoubleOrNull()
-                    if (parsedAmount != null && transactionName.isNotBlank() && category != -1) {
-                        onAddTransaction(parsedAmount, date, transactionName, isIncome, categoryNames[category])
+                    if (parsedAmount != null && transactionName.isNotBlank() && selectedCategoryIndex != -1) {
+                        onAddTransaction(parsedAmount, date, transactionName, isIncome, categoryNames[selectedCategoryIndex])
                     }
                 }) {
-                    Text("Add Transaction")
+                    if(transactionToEdit == null)
+                        Text("Add Transaction")
+                    else
+                        Text("Edit")
                 }
             }
 
         }
+
+
     )
 
 }

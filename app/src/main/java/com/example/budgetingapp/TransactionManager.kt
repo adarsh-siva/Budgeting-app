@@ -19,19 +19,27 @@ class TransactionManager {
             "Other",
         )
 
-    val id = 0
+    var id = 0
     fun addTransaction(amount : Double, date : LocalDate, name: String, TransactionType: Boolean, category: String) {
         transactions.add(Transaction(id, amount, date, name, TransactionType,category))
-
+        id++
     }
     fun deleteTransaction(id: Int) {
         transactions.removeIf { it.id == id }
     }
-    fun updateTransaction(id: Int, amount : Double, date : LocalDate, category: String, TransactionType: Boolean) {
+    fun updateTransaction(
+        id: Int,
+        amount: Double,
+        date: LocalDate,
+        name: String,
+        TransactionType: Boolean,
+        category: String
+    ) {
         transactions.find { it.id == id }?.let {
             it.amount = amount
             it.date = date
-            it.name = category
+            it.name = name
+            it.category = category
             it.TransactionType = TransactionType
         }
     }

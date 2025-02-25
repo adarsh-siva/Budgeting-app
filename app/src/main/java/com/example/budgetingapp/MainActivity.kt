@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,13 +43,20 @@ import kotlin.text.toDoubleOrNull
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import co.yml.charts.common.model.Point
+import co.yml.charts.ui.linechart.LineChart
+import co.yml.charts.ui.linechart.model.LineChartData
 import kotlinx.coroutines.launch
 
 import java.time.Instant
@@ -57,6 +65,8 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlin.text.format
+import kotlin.text.isBlank
+import kotlin.text.isNotBlank
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,6 +81,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun BudgetingApp() {
     val transactionManager = remember { TransactionManager() }
+    val BudgetLine = remember { BudgetLine() }
     var showAddDialog by remember { mutableStateOf(false) }
     var transactions by remember { mutableStateOf(transactionManager.transactions) }
     var transactionsMap by remember { mutableStateOf(transactionManager.getOrderedTransactions()) }
@@ -79,6 +90,8 @@ fun BudgetingApp() {
     var isAddingTransaction by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val tabItems = listOf("Transactions", "Dashboard", "Categories")
+    var searchText by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
     Scaffold(
         topBar = {
@@ -91,11 +104,6 @@ fun BudgetingApp() {
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
-                    },
-                    actions = {
-                        IconButton(onClick = { showAddDialog = true }) {
-                            Icon(Icons.Filled.Add, "Add Transaction")
-                        }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -110,11 +118,77 @@ fun BudgetingApp() {
                         )
                     }
                 }
+                if (selectedTabIndex == 0) {
+
+                    OutlinedTextField(
+                        maxLines = 1,
+                        value = searchText,
+                        onValueChange = {
+                            searchText = it
+                            if (it.isBlank()) {
+                                transactionsMap = transactionManager.getOrderedTransactions()
+                            } else {
+                                transactionsMap = transactionManager.searchTransactions(it)
+                            }
+                        },
+
+                        label = { Text("Search Transactions") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        trailingIcon = {
+                            if (searchText.isNotBlank()) {
+                                IconButton(onClick = {
+                                    searchText = ""
+                                    transactionsMap = transactionManager.getOrderedTransactions()
+                                }) {
+                                    Icon(Icons.Filled.Clear, "Clear Search")
+                                }
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = { focusManager.clearFocus() } // Hides the keyboard when Enter is pressed
+                        )
+
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Button(onClick = { showAddDialog = true }) {
+                            Icon(Icons.Filled.Add, "Add Transaction")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Add Transaction")
+                        }
+                    }
+
+                }
             }
         },
         content = { innerPadding ->
+            val points = listOf(
+
+                Point(0f, 10f),
+                Point(2f, 20f))
+
+            val map = transactionManager.getReverseOrderedTransactions()
+            var pointss : MutableList<Point> = mutableListOf()
+
+            var balance = 0.00f
+            for((date, transactions) in map)
+            {
+                balance += transactions.sumOf {it.amount}.toFloat()
+                pointss.add(Point(date.dayOfMonth.toFloat(), balance))
+            }
+
             when (selectedTabIndex) {
-                0 -> TransactionList(
+                0 ->
+                    TransactionList(
                     transactions = transactionsMap,
                     modifier = Modifier.padding(innerPadding),
                     onEditTransaction = { transaction ->
@@ -122,7 +196,8 @@ fun BudgetingApp() {
                         showAddDialog = true
                     }
                 )
-                1 -> DashboardScreen(modifier = Modifier.padding(innerPadding),transactionManager.getBalance())
+
+                1 -> DashboardScreen(modifier = Modifier.padding(innerPadding),transactionManager.getBalance(), BudgetLine.buildGraph(pointss), map.size)
                 //2 -> CategoriesScreen(modifier = Modifier.padding(innerPadding))
             }
             if (showAddDialog) {
@@ -170,7 +245,7 @@ fun BudgetingApp() {
 }
 
 @Composable
-fun DashboardScreen(modifier: Modifier, balance: Double) {
+fun DashboardScreen(modifier: Modifier, balance: Double, lineChartData: LineChartData, numTransactions : Int) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -191,6 +266,16 @@ fun DashboardScreen(modifier: Modifier, balance: Double) {
             textAlign = TextAlign.Center,
             color = if (balance >= 0) Color(0xFF388E3C) else Color(0xFFC62828) // Green if positive, red if negative
         )
+        if(numTransactions >= 2)
+        {
+            LineChart(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                lineChartData = lineChartData
+            )
+        }
+
     }
 }
 

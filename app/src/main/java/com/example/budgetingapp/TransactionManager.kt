@@ -1,5 +1,6 @@
 package com.example.budgetingapp
 
+import androidx.compose.ui.text.toLowerCase
 import java.time.LocalDate
 
 
@@ -24,6 +25,10 @@ class TransactionManager {
         transactions.add(Transaction(id, amount, date, name, TransactionType,category))
         id++
     }
+    fun searchTransactions(search : String) : Map<LocalDate, List<Transaction>>
+    {
+        return transactions.filter { it.name.lowercase().contains(search.lowercase()) || it.category.lowercase().contains(search.lowercase()) || it.amount.toString().contains(search)}.groupBy { it.date }
+    }
     fun deleteTransaction(id: Int) {
         transactions.removeIf { it.id == id }
     }
@@ -45,6 +50,9 @@ class TransactionManager {
     }
     fun getOrderedTransactions(): Map<LocalDate, List<Transaction>>  {
             return transactions.sortedByDescending { it.date }.groupBy { it.date }
+    }
+    fun getReverseOrderedTransactions(): Map<LocalDate, List<Transaction>>  {
+        return transactions.sortedBy { it.date }.groupBy { it.date }
     }
     fun getBalance(): Double {
         var balance  = 0.00;

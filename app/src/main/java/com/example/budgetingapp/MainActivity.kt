@@ -55,6 +55,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import co.yml.charts.common.model.Point
+import co.yml.charts.ui.barchart.GroupBarChart
+import co.yml.charts.ui.barchart.models.GroupBarChartData
 import co.yml.charts.ui.linechart.LineChart
 import co.yml.charts.ui.linechart.model.LineChartData
 import kotlinx.coroutines.launch
@@ -171,20 +173,36 @@ fun BudgetingApp() {
             }
         },
         content = { innerPadding ->
-            val points = listOf(
 
-                Point(0f, 10f),
-                Point(2f, 20f))
 
             val map = transactionManager.getReverseOrderedTransactions()
-            var pointss : MutableList<Point> = mutableListOf()
-
-            var balance = 0.00f
+            val weeklyData = mutableMapOf<Int, Pair<Float, Float>>()
+            val monthlyData = mutableMapOf<Int, Pair<Float, Float>>()
+            for(i in 0..3)
+            {
+                weeklyData[i] = Pair(0f, 0f)
+            }
+            for(i in 1..12)
+            {
+                monthlyData[i] = Pair(0f, 0f)
+            }
+            //weekly view
             for((date, transactions) in map)
             {
-                balance += transactions.sumOf {it.amount}.toFloat()
-                pointss.add(Point(date.dayOfMonth.toFloat(), balance))
+                val weekIndex = ((date.dayOfMonth - 1) / 7).coerceIn(0, 3)
+                val expenses = transactions.filter { !it.TransactionType }.sumOf { it.amount }.toFloat()
+                val income = transactions.filter { it.TransactionType }.sumOf { it.amount }.toFloat()
+                weeklyData[weekIndex] = Pair(weeklyData[weekIndex]!!.first + expenses, weeklyData[weekIndex]!!.second + income)
             }
+            //monthly view
+            for((date, transactions) in map)
+            {
+                val monthIndex = date.monthValue.coerceIn(1, 12)
+                val expenses = transactions.filter { !it.TransactionType }.sumOf { it.amount }.toFloat()
+                val income = transactions.filter { it.TransactionType }.sumOf { it.amount }.toFloat()
+
+            }
+
 
             when (selectedTabIndex) {
                 0 ->
@@ -197,7 +215,7 @@ fun BudgetingApp() {
                     }
                 )
 
-                1 -> DashboardScreen(modifier = Modifier.padding(innerPadding),transactionManager.getBalance(), BudgetLine.buildGraph(pointss), map.size)
+                1 -> DashboardScreen(modifier = Modifier.padding(innerPadding),transactionManager.getBalance(), map)
                 //2 -> CategoriesScreen(modifier = Modifier.padding(innerPadding))
             }
             if (showAddDialog) {
@@ -244,8 +262,52 @@ fun BudgetingApp() {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(modifier: Modifier, balance: Double, lineChartData: LineChartData, numTransactions : Int) {
+fun DashboardScreen(modifier: Modifier, balance: Double,map :Map<LocalDate, List<Transaction>>) {
+    val BudgetLine = remember { BudgetLine() }
+    val weeklyData = mutableMapOf<Int, Pair<Float, Float >>()
+    val monthlyData = mutableMapOf<Int, Pair<Float, Float>>()
+    var selectedIndex by remember { mutableIntStateOf(0) }
+    var isWeekly by remember { mutableStateOf(true) };
+    val options = listOf("Weekly", "Monthly")
+    for(i in 0..3)
+    {
+        weeklyData[i] = Pair(0f, 0f)
+    }
+    for(i in 1..12)
+    {
+        monthlyData[i] = Pair(0f, 0f)
+    }
+    //weekly view
+    if(isWeekly)
+    {
+        for((date, transactions) in map)
+        {
+            if(date.monthValue != LocalDate.now().monthValue)
+                continue
+            val weekIndex = ((date.dayOfMonth - 1) / 7).coerceIn(0, 3)
+            val expenses = transactions.filter { !it.TransactionType }.sumOf { it.amount }.toFloat()
+            val income = transactions.filter { it.TransactionType }.sumOf { it.amount }.toFloat()
+            weeklyData[weekIndex] = Pair(weeklyData[weekIndex]!!.first + expenses, weeklyData[weekIndex]!!.second + income)
+        }
+    }
+    //monthly view
+    else
+    {
+        for((date, transactions) in map)
+        {
+            val monthIndex = date.monthValue.coerceIn(1, 12)
+            val expenses = transactions.filter { !it.TransactionType }.sumOf { it.amount }.toFloat()
+            val income = transactions.filter { it.TransactionType }.sumOf { it.amount }.toFloat()
+            monthlyData[monthIndex] = Pair(monthlyData[monthIndex]!!.first + expenses, monthlyData[monthIndex]!!.second + income)
+        }
+    }
+    val lineChartData : GroupBarChartData
+    if(isWeekly)
+         lineChartData = BudgetLine.buildGraph(weeklyData)
+    else
+         lineChartData = BudgetLine.buildGraph(monthlyData,false)
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -264,19 +326,45 @@ fun DashboardScreen(modifier: Modifier, balance: Double, lineChartData: LineChar
             fontSize = 48.sp,
             fontWeight = FontWeight.ExtraBold,
             textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 40.dp),
             color = if (balance >= 0) Color(0xFF388E3C) else Color(0xFFC62828) // Green if positive, red if negative
+
         )
-        if(numTransactions >= 2)
-        {
-            LineChart(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp),
-                lineChartData = lineChartData
-            )
+        Text(
+            text = "Income & Expenses",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 30.dp)
+        )
+        SingleChoiceSegmentedButtonRow {
+            options.forEachIndexed { index, label ->
+                SegmentedButton(
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = options.size
+                    ),
+                    onClick = { selectedIndex = index
+                        if(selectedIndex == 0) {isWeekly = true}
+                        else {isWeekly = false}},
+                    selected = index == selectedIndex,
+                    label = { Text(label) }
+                )
+            }
         }
 
+            GroupBarChart(modifier = Modifier
+                .height(350.dp)
+                .fillMaxWidth()
+                , groupBarChartData = lineChartData)
+
+
+
     }
+
+
+
+
 }
 
 @Composable
@@ -343,7 +431,8 @@ fun TransactionItem(transaction: Transaction,  onEditTransaction: (Transaction) 
 
             }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = transaction.category, color = Color.Gray, textAlign = TextAlign.Start)
+                if(!transaction.TransactionType)
+                    Text(text = transaction.category, color = textColor, textAlign = TextAlign.Start)
             }
             Text(text = "${if (transaction.TransactionType) "+ $" else "- $"}${String.format("%.2f", transaction.amount)}", fontWeight = FontWeight.Bold, color = textColor)
         }
@@ -408,7 +497,7 @@ fun AddTransactionDialog(
 
             Row(modifier = Modifier.fillMaxWidth(),verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
 
-                    var selectedIndex by remember { mutableIntStateOf(0) }
+                var selectedIndex by remember { mutableIntStateOf(0) }
                 if(isIncome)
                     selectedIndex = 1
                 val options = listOf("Expense", "Income")
@@ -464,22 +553,26 @@ fun AddTransactionDialog(
 
 
             Column {
-                Spacer(modifier = Modifier.height(250.dp))
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Spacer(modifier = Modifier.height(50.dp))
+                if(!isIncome)
+                {
+                    Spacer(modifier = Modifier.height(250.dp))
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Spacer(modifier = Modifier.height(50.dp))
 
-                    categoryNames.forEachIndexed {index, label ->
-                        InputChip(
-                            selected = selectedCategoryIndex == index,
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                            onClick = { selectedCategoryIndex = index},
-                            label = { Text(label) }
-                        )
-                    }
+                        categoryNames.forEachIndexed {index, label ->
+                            InputChip(
+                                selected = selectedCategoryIndex == index,
+                                modifier = Modifier.padding(horizontal = 4.dp),
+                                onClick = { selectedCategoryIndex = index},
+                                label = { Text(label) }
+                            )
+                        }
+                }
+
                 }
             }
         },

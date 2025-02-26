@@ -112,11 +112,11 @@ fun BudgetingApp() {
     transactions.add(Transaction(12, 50.85, LocalDate.of(2025, 2, 6), "Grocery Shopping", false, "Groceries"));
     transactions.add(Transaction(13, 40.00, LocalDate.of(2025, 2, 8), "Clothing Sale", false, "Clothing"));
     transactions.add(Transaction(14, 200.00, LocalDate.of(2025, 2, 10), "Part-time Job", true, "Other"));
-    transactions.add(Transaction(15, 100.00, LocalDate.of(2025, 2, 15), "Valentine's Dinner", false, "Restaurants"));
+    transactions.add(Transaction(15, 100.00, LocalDate.of(2025, 2, 10), "Valentine's Dinner", false, "Restaurants"));
     transactions.add(Transaction(16, 75.99, LocalDate.of(2025, 2, 18), "New Headphones", false, "Shops"));
     transactions.add(Transaction(17, 30.45, LocalDate.of(2025, 2, 20), "Phone Bill", false, "Utilities"));
     transactions.add(Transaction(18, 15.99, LocalDate.of(2025, 2, 23), "Spotify Subscription", false, "Entertainment"));
-    transactions.add(Transaction(19, 300.00, LocalDate.of(2025, 2, 25), "Scholarship", true, "Other"));
+    transactions.add(Transaction(19, 300.00, LocalDate.of(2025, 2, 27), "Scholarship", true, "Other"));
     transactions.add(Transaction(20, 60.00, LocalDate.of(2025, 2, 27), "Grocery Shopping", false, "Groceries"));
     transactions.add(Transaction(21, 600.00, LocalDate.of(2025, 3, 5), "March Rent", false, "Rent"));
     transactions.add(Transaction(22, 85.25, LocalDate.of(2025, 3, 7), "Clothing Shopping", false, "Clothing"));
@@ -135,7 +135,7 @@ fun BudgetingApp() {
     transactions.add(Transaction(35, 90.00, LocalDate.of(2025, 4, 12), "New Sneakers", false, "Clothing"));
     transactions.add(Transaction(36, 80.00, LocalDate.of(2025, 4, 14), "Electricity Bill", false, "Utilities"));
     transactions.add(Transaction(37, 10.00, LocalDate.of(2025, 4, 18), "Coffee Break", false, "Restaurants"));
-    transactions.add(Transaction(38, 250.00, LocalDate.of(2025, 4, 20), "Scholarship Bonus", true, "Other"));
+    transactions.add(Transaction(38, 250.00, LocalDate.of(2025, 4, 22), "Scholarship Bonus", true, "Other"));
     transactions.add(Transaction(39, 15.00, LocalDate.of(2025, 4, 22), "Uber Ride", false, "Other"));
     transactions.add(Transaction(40, 500.00, LocalDate.of(2025, 4, 25), "Freelance Project", true, "Other"));
     transactions.add(Transaction(41, 600.00, LocalDate.of(2025, 5, 5), "May Rent", false, "Rent"));
@@ -144,7 +144,7 @@ fun BudgetingApp() {
     transactions.add(Transaction(44, 40.00, LocalDate.of(2025, 5, 12), "Cinema Ticket", false, "Entertainment"));
     transactions.add(Transaction(45, 150.00, LocalDate.of(2025, 5, 15), "Part-time Job", true, "Other"));
     transactions.add(Transaction(46, 80.00, LocalDate.of(2025, 5, 18), "New Jacket", false, "Clothing"));
-    transactions.add(Transaction(47, 35.75, LocalDate.of(2025, 5, 20), "Gas Bill", false, "Utilities"));
+    transactions.add(Transaction(47, 35.75, LocalDate.of(2025, 5,   20), "Gas Bill", false, "Utilities"));
     transactions.add(Transaction(48, 25.00, LocalDate.of(2025, 5, 22), "Spotify & Netflix", false, "Entertainment"));
     transactions.add(Transaction(49, 900.00, LocalDate.of(2025, 5, 25), "Tutoring Income", true, "Other"));
     transactions.add(Transaction(50, 75.00, LocalDate.of(2025, 5, 27), "Groceries", false, "Groceries"));

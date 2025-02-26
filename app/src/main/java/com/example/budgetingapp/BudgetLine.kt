@@ -60,7 +60,7 @@ class BudgetLine {
                 {
                     groupBarList.add(GroupBar(LocalDate.of(year, month, 1).month.name.lowercase().replaceFirstChar { it.uppercase() }.substring(0, 3), listOf(BarData(point = Point(0f, data.first)), BarData(point = Point(0f, data.second)))))
                     if(data.first > maxValue)
-                        maxValue = data.first
+                            maxValue = data.first
                     if(data.second > maxValue)
                         maxValue = data.second
                 }

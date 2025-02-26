@@ -1,8 +1,11 @@
 package com.example.budgetingapp
 
+import android.graphics.Typeface
 import android.os.Bundle
+import android.text.TextUtils
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -43,6 +46,7 @@ import kotlin.text.toDoubleOrNull
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Add
@@ -50,15 +54,21 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import co.yml.charts.common.model.PlotType
 import co.yml.charts.common.model.Point
 import co.yml.charts.ui.barchart.GroupBarChart
 import co.yml.charts.ui.barchart.models.GroupBarChartData
 import co.yml.charts.ui.linechart.LineChart
 import co.yml.charts.ui.linechart.model.LineChartData
+import co.yml.charts.ui.piechart.charts.DonutPieChart
+import co.yml.charts.ui.piechart.models.PieChartConfig
+import co.yml.charts.ui.piechart.models.PieChartData
 import kotlinx.coroutines.launch
 
 import java.time.Instant
@@ -332,7 +342,7 @@ fun BudgetingApp() {
                 )
 
                 1 -> DashboardScreen(modifier = Modifier.padding(innerPadding),transactionManager.getBalance(), map)
-                //2 -> CategoriesScreen(modifier = Modifier.padding(innerPadding))
+                2 -> CategoriesScreen(modifier = Modifier.padding(innerPadding),transactionManager.transactions)
             }
             if (showAddDialog) {
                 AddTransactionDialog(
@@ -376,6 +386,106 @@ fun BudgetingApp() {
             }
         }
     )
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoriesScreen(modifier: Modifier, list:  List<Transaction>)
+{
+    val categories =
+        listOf(
+            "Rent",
+            "Utilities",
+            "Entertainment",
+            "Groceries",
+            "Restaurants",
+            "Shops",
+            "Clothing",
+            "Other",
+        )
+    val categoryMap = mutableMapOf<String, Float>()
+        for(transaction in list)
+        {
+
+            if(!transaction.TransactionType)
+                categoryMap[transaction.category] =  (categoryMap.getOrDefault(transaction.category, 0f) + transaction.amount.toFloat())
+
+        }
+    val categoryColors = listOf(
+        "Rent" to Color(0xFFC62828),         // Deep Red
+        "Utilities" to Color(0xFF1565C0),     // Strong Blue
+        "Entertainment" to Color(0xFF7B1FA2), // Rich Purple
+        "Groceries" to Color(0xFF2E7D32),     // Fresh Green
+        "Restaurants" to Color(0xFFFFA000),   // Warm Orange
+        "Shops" to Color(0xFFD81B60),         // Bright Pink
+        "Clothing" to Color(0xFF00897B),      // Teal
+        "Other" to Color(0xFF757575)          // Neutral Gray
+    )
+
+    val categoryList = mutableListOf<PieChartData.Slice>()
+    for((category, amount) in categoryMap)
+    {
+        categoryList.add(PieChartData.Slice(category,String.format("%.2f", amount).toFloat(), categoryColors.find { it.first == category }!!.second))
+    }
+
+    val donutChartData = PieChartData(
+        slices = categoryList,
+        plotType = PlotType.Donut
+    )
+    val donutChartConfig = PieChartConfig(
+        strokeWidth = 120f,
+        activeSliceAlpha = .9f,
+        isAnimationEnable = true,
+        labelVisible = true,
+        labelColor = Color.Black,
+        sliceLabelTextColor = Color.Black,
+        backgroundColor = MaterialTheme.colorScheme.background,
+        chartPadding = 40,
+        labelTypeface = Typeface.defaultFromStyle(Typeface.NORMAL),
+        isSumVisible = true,
+        labelType = PieChartConfig.LabelType.VALUE,
+
+    )
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ){
+        categoryColors.chunked(2).forEach { rowItems ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                rowItems.forEach { (category, color) ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .background(color, shape = CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = category, fontSize = 16.sp)
+                    }
+                }
+            }
+
+        }
+        Spacer(modifier = Modifier.height(40.dp))
+        Text(
+            text = "Expense by Category",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+
+        )
+        DonutPieChart(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp),
+            donutChartData,
+            donutChartConfig
+        )
+    }
+
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -483,6 +593,7 @@ fun DashboardScreen(modifier: Modifier, balance: Double,map :Map<LocalDate, List
 
 }
 
+
 @Composable
 fun TransactionList(transactions: Map<LocalDate, List<Transaction>>, modifier: Modifier = Modifier, onEditTransaction: (Transaction) -> Unit) {
 
@@ -581,7 +692,6 @@ fun AddTransactionDialog(
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     )
-
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },

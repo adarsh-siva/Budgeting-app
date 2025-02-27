@@ -2,13 +2,11 @@ package com.example.budgetingapp
 
 import android.graphics.Typeface
 import android.os.Bundle
-import android.text.TextUtils
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,18 +52,13 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import co.yml.charts.common.model.PlotType
-import co.yml.charts.common.model.Point
 import co.yml.charts.ui.barchart.GroupBarChart
 import co.yml.charts.ui.barchart.models.GroupBarChartData
-import co.yml.charts.ui.linechart.LineChart
-import co.yml.charts.ui.linechart.model.LineChartData
 import co.yml.charts.ui.piechart.charts.DonutPieChart
 import co.yml.charts.ui.piechart.models.PieChartConfig
 import co.yml.charts.ui.piechart.models.PieChartData
@@ -94,7 +87,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun BudgetingApp() {
     val transactionManager = remember { TransactionManager() }
-    val BudgetLine = remember { BudgetLine() }
+
     var showAddDialog by remember { mutableStateOf(false) }
     var transactions by remember { mutableStateOf(transactionManager.transactions) }
     var transactionsMap by remember { mutableStateOf(transactionManager.getOrderedTransactions()) }
@@ -105,8 +98,8 @@ fun BudgetingApp() {
     val tabItems = listOf("Transactions", "Dashboard", "Categories")
     var searchText by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
-    //transactions.add(Transaction(0, 50.34 , LocalDate.of(2025, 2, 8), "testadd0", true, "Other"))
-   // transactions.add(Transaction( 1, 70.82 , LocalDate.of(2025, 2, 20), "testadd1", true, "Other"))
+
+    //preloads transaction data
     transactions.add(Transaction(0, 600.00, LocalDate.of(2025, 1, 5), "January Rent", false, "Rent"));
     transactions.add(Transaction(1, 45.75, LocalDate.of(2025, 1, 7), "Grocery Shopping", false, "Groceries"));
     transactions.add(Transaction(2, 65.00, LocalDate.of(2025, 1, 10), "Electricity Bill", false, "Utilities"));
@@ -245,7 +238,7 @@ fun BudgetingApp() {
                         )
                     }
                 }
-                //ioADASUIODHASUIOHD
+                //if in transaction tab add a search bar
                 if (selectedTabIndex == 0) {
 
                     OutlinedTextField(
@@ -302,35 +295,11 @@ fun BudgetingApp() {
 
 
             val map = transactionManager.getReverseOrderedTransactions()
-            val weeklyData = mutableMapOf<Int, Pair<Float, Float>>()
-            val monthlyData = mutableMapOf<Int, Pair<Float, Float>>()
-            for(i in 0..3)
-            {
-                weeklyData[i] = Pair(0f, 0f)
-            }
-            for(i in 1..12)
-            {
-                monthlyData[i] = Pair(0f, 0f)
-            }
-            //weekly view
-            for((date, transactions) in map)
-            {
-                val weekIndex = ((date.dayOfMonth - 1) / 7).coerceIn(0, 3)
-                val expenses = transactions.filter { !it.TransactionType }.sumOf { it.amount }.toFloat()
-                val income = transactions.filter { it.TransactionType }.sumOf { it.amount }.toFloat()
-                weeklyData[weekIndex] = Pair(weeklyData[weekIndex]!!.first + expenses, weeklyData[weekIndex]!!.second + income)
-            }
-            //monthly view
-            for((date, transactions) in map)
-            {
-                val monthIndex = date.monthValue.coerceIn(1, 12)
-                val expenses = transactions.filter { !it.TransactionType }.sumOf { it.amount }.toFloat()
-                val income = transactions.filter { it.TransactionType }.sumOf { it.amount }.toFloat()
 
-            }
 
 
             when (selectedTabIndex) {
+                //UI for transactions
                 0 ->
                     TransactionList(
                     transactions = transactionsMap,
@@ -340,8 +309,9 @@ fun BudgetingApp() {
                         showAddDialog = true
                     }
                 )
-
+                //UI for Dashboard
                 1 -> DashboardScreen(modifier = Modifier.padding(innerPadding),transactionManager.getBalance(), map)
+                //UI for Categories
                 2 -> CategoriesScreen(modifier = Modifier.padding(innerPadding),transactionManager.transactions)
             }
             if (showAddDialog) {
@@ -391,25 +361,16 @@ fun BudgetingApp() {
 @Composable
 fun CategoriesScreen(modifier: Modifier, list:  List<Transaction>)
 {
-    val categories =
-        listOf(
-            "Rent",
-            "Utilities",
-            "Entertainment",
-            "Groceries",
-            "Restaurants",
-            "Shops",
-            "Clothing",
-            "Other",
-        )
+
     val categoryMap = mutableMapOf<String, Float>()
         for(transaction in list)
         {
 
-            if(!transaction.TransactionType)
+            if(!transaction.isIncome)
                 categoryMap[transaction.category] =  (categoryMap.getOrDefault(transaction.category, 0f) + transaction.amount.toFloat())
 
         }
+    //legend for categories screen
     val categoryColors = listOf(
         "Rent" to Color(0xFFC62828),         // Deep Red
         "Utilities" to Color(0xFF1565C0),     // Strong Blue
@@ -426,7 +387,7 @@ fun CategoriesScreen(modifier: Modifier, list:  List<Transaction>)
     {
         categoryList.add(PieChartData.Slice(category,String.format("%.2f", amount).toFloat(), categoryColors.find { it.first == category }!!.second))
     }
-
+    //donut chart data
     val donutChartData = PieChartData(
         slices = categoryList,
         plotType = PlotType.Donut
@@ -497,6 +458,7 @@ fun DashboardScreen(modifier: Modifier, balance: Double,map :Map<LocalDate, List
     var selectedIndex by remember { mutableIntStateOf(0) }
     var isWeekly by remember { mutableStateOf(true) };
     val options = listOf("Weekly", "Monthly")
+    //sets all the weekly and monthly data to zero
     for(i in 0..3)
     {
         weeklyData[i] = Pair(0f, 0f)
@@ -510,11 +472,13 @@ fun DashboardScreen(modifier: Modifier, balance: Double,map :Map<LocalDate, List
     {
         for((date, transactions) in map)
         {
+            //only allows transactions that are in the same month to show
             if(date.monthValue != LocalDate.now().monthValue)
                 continue
             val weekIndex = ((date.dayOfMonth - 1) / 7).coerceIn(0, 3)
-            val expenses = transactions.filter { !it.TransactionType }.sumOf { it.amount }.toFloat()
-            val income = transactions.filter { it.TransactionType }.sumOf { it.amount }.toFloat()
+            //adds the expenses and income to the weekly data
+            val expenses = transactions.filter { !it.isIncome }.sumOf { it.amount }.toFloat()
+            val income = transactions.filter { it.isIncome }.sumOf { it.amount }.toFloat()
             weeklyData[weekIndex] = Pair(weeklyData[weekIndex]!!.first + expenses, weeklyData[weekIndex]!!.second + income)
         }
     }
@@ -524,8 +488,9 @@ fun DashboardScreen(modifier: Modifier, balance: Double,map :Map<LocalDate, List
         for((date, transactions) in map)
         {
             val monthIndex = date.monthValue.coerceIn(1, 12)
-            val expenses = transactions.filter { !it.TransactionType }.sumOf { it.amount }.toFloat()
-            val income = transactions.filter { it.TransactionType }.sumOf { it.amount }.toFloat()
+            //adds the expenses and income to the monthly data
+            val expenses = transactions.filter { !it.isIncome }.sumOf { it.amount }.toFloat()
+            val income = transactions.filter { it.isIncome }.sumOf { it.amount }.toFloat()
             monthlyData[monthIndex] = Pair(monthlyData[monthIndex]!!.first + expenses, monthlyData[monthIndex]!!.second + income)
         }
     }
@@ -633,8 +598,8 @@ fun dateHeader(date: LocalDate)
 
 @Composable
 fun TransactionItem(transaction: Transaction,  onEditTransaction: (Transaction) -> Unit) {
-    val backgroundColor = if (transaction.TransactionType) Color(0xFFE8F5E9) else Color(0xFFFCE4EC) // Light green for income, light red for expense
-    val textColor = if (transaction.TransactionType) Color(0xFF388E3C) else Color(0xFFC62828) // Dark green for income, dark red for expense
+    val backgroundColor = if (transaction.isIncome) Color(0xFFE8F5E9) else Color(0xFFFCE4EC) // Light green for income, light red for expense
+    val textColor = if (transaction.isIncome) Color(0xFF388E3C) else Color(0xFFC62828) // Dark green for income, dark red for expense
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -658,10 +623,10 @@ fun TransactionItem(transaction: Transaction,  onEditTransaction: (Transaction) 
 
             }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                if(!transaction.TransactionType)
+                if(!transaction.isIncome)
                     Text(text = transaction.category, color = textColor, textAlign = TextAlign.Start)
             }
-            Text(text = "${if (transaction.TransactionType) "+ $" else "- $"}${String.format("%.2f", transaction.amount)}", fontWeight = FontWeight.Bold, color = textColor)
+            Text(text = "${if (transaction.isIncome) "+ $" else "- $"}${String.format("%.2f", transaction.amount)}", fontWeight = FontWeight.Bold, color = textColor)
         }
     }
 }
@@ -682,7 +647,7 @@ fun AddTransactionDialog(
     var date by remember { mutableStateOf(transactionToEdit?.date ?: LocalDate.now()) }
     var formattedDate = date.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
     var category by remember { mutableStateOf(transactionToEdit?.category ?: "") }
-    var isIncome by remember { mutableStateOf(transactionToEdit?.TransactionType ?: false) }
+    var isIncome by remember { mutableStateOf(transactionToEdit?.isIncome ?: false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var transactionName by remember { mutableStateOf(transactionToEdit?.name ?: "") }
     val transactionManager = remember { TransactionManager() }

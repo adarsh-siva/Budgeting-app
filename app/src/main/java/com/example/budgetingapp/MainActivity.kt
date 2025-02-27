@@ -1,5 +1,14 @@
 package com.example.budgetingapp
 
+import android.widget.Toast
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import android.graphics.Typeface
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -78,7 +87,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             BudgetingApp()
-
+            InteractiveQnA()
         }
     }
 }
@@ -357,6 +366,73 @@ fun BudgetingApp() {
         }
     )
 }
+@Composable
+fun InteractiveQnA() {
+    val context = LocalContext.current
+    var showDialog by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
+    val qaList = mapOf(
+        "budget" to "A budget helps track income and expenses to manage finances better.",
+        "credit score" to "A credit score is a numerical representation of creditworthiness.",
+        "savings" to "Savings is the portion of income not spent and set aside for future use."
+    )
+
+    Box(
+        contentAlignment = Alignment.TopEnd,
+        modifier = Modifier.fillMaxSize()
+            .offset(x = (-16).dp, y = 8.dp),
+    ) {
+        Button(onClick = { showDialog = true }) {
+            Text("?")
+        }
+    }
+
+
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Search Finance Q&A") },
+            text = {
+                Column {
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, color = Color.Black)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Filter the answers based on the search query
+                    val results = qaList.filter { entry ->
+                        entry.value.contains(searchQuery.text, ignoreCase = true)
+                    }
+
+                    if (results.isEmpty()) {
+                        Text("No answers found.", fontSize = 14.sp, color = Color.Gray)
+                    } else {
+                        results.forEach { entry ->
+                            Text(
+                                text = "${entry.key}: ${entry.value}",
+                                fontSize = 14.sp,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { showDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(modifier: Modifier, list:  List<Transaction>)

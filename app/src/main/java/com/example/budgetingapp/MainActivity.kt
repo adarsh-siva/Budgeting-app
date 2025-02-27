@@ -14,6 +14,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +59,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalFocusManager
@@ -369,12 +371,15 @@ fun BudgetingApp() {
 @Composable
 fun InteractiveQnA() {
     val context = LocalContext.current
-    var showDialog by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
-    val qaList = mapOf(
-        "budget" to "A budget helps track income and expenses to manage finances better.",
-        "credit score" to "A credit score is a numerical representation of creditworthiness.",
-        "savings" to "Savings is the portion of income not spent and set aside for future use."
+    // Only storing answers
+    val answersList = listOf(
+            "A budget helps track income and expenses to manage finances better.",
+            "A credit score is a numerical representation of creditworthiness.",
+            "Savings is the portion of income not spent and set aside for future use.",
+            "Investing can help grow wealth over time by putting money into assets like stocks or real estate.",
+            "Credit cards can be useful for building credit but can also lead to debt if not managed properly."
     )
 
     Box(
@@ -382,54 +387,85 @@ fun InteractiveQnA() {
         modifier = Modifier.fillMaxSize()
             .offset(x = (-16).dp, y = 8.dp),
     ) {
-        Button(onClick = { showDialog = true }) {
+        Button(onClick = { showMenu = true }) {
             Text("?")
         }
     }
 
+    // Show menu as a separate screen/modal
+    if (showMenu) {
+        FullScreenMenu(
+            onDismiss = { showMenu = false },
+            answersList = answersList,
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it }
+        )
+    }
+}
+
+@Composable
+fun FullScreenMenu(
+    onDismiss: () -> Unit,
+    answersList: List<String>,
+    searchQuery: TextFieldValue,
+    onSearchQueryChange: (TextFieldValue) -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color(0xFFEFEFEF))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            // Close Button
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(imageVector = Icons.Default.Close, contentDescription = "Close Menu")
+            }
+
+            Text("Search Finance Q&A", style = MaterialTheme.typography.headlineMedium)
+
+            Spacer(modifier = Modifier.height(16.dp))
 
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Search Finance Q&A") },
-            text = {
-                Column {
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
+            // Search Bar
+            BasicTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .border(1.dp, Color.Gray),
+                textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, color = Color.Black)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Filtered results based on search query
+            val results = answersList.filter { answer ->
+                answer.contains(searchQuery.text, ignoreCase = true)
+            }
+
+            if (results.isEmpty()) {
+                Text("No answers found.", fontSize = 14.sp, color = Color.Gray)
+            } else {
+                // Box answers separately with light borders
+                results.forEach { answer ->
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(8.dp),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, color = Color.Black)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Filter the answers based on the search query
-                    val results = qaList.filter { entry ->
-                        entry.value.contains(searchQuery.text, ignoreCase = true)
+                            .padding(vertical = 8.dp)
+                            .border(1.dp, Color.LightGray, shape = MaterialTheme.shapes.medium)
+                            .padding(12.dp)
+                    ) {
+                        Text(text = answer, fontSize = 14.sp, color = Color.Black)
                     }
-
-                    if (results.isEmpty()) {
-                        Text("No answers found.", fontSize = 14.sp, color = Color.Gray)
-                    } else {
-                        results.forEach { entry ->
-                            Text(
-                                text = "${entry.key}: ${entry.value}",
-                                fontSize = 14.sp,
-                                color = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(onClick = { showDialog = false }) {
-                    Text("Close")
                 }
             }
-        )
+        }
     }
 }
 

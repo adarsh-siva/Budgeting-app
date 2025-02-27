@@ -230,7 +230,7 @@ fun BudgetingApp() {
                 CenterAlignedTopAppBar(
                     title = {
                         Text(
-                            "Budgeting App",
+                            "Budget Buddy",
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
@@ -375,11 +375,41 @@ fun InteractiveQnA() {
     var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
     // Only storing answers
     val answersList = listOf(
-            "A budget helps track income and expenses to manage finances better.",
-            "A credit score is a numerical representation of creditworthiness.",
-            "Savings is the portion of income not spent and set aside for future use.",
-            "Investing can help grow wealth over time by putting money into assets like stocks or real estate.",
-            "Credit cards can be useful for building credit but can also lead to debt if not managed properly."
+
+        "You can track your monthly income and expenses to get a better idea of your financial health.",
+        "The app allows you to categorize your spending, so you can easily see where your money goes.",
+        "To get started, simply enter your income and expenses, including the amount, category, and date.",
+        "You can view your current balance anytime to know exactly how much money you have available.",
+        "The app provides summaries of your income and expenses over different periods like weekly and monthly.",
+        "You can update or delete any transaction you've entered, keeping your records accurate.",
+        "Use the search feature to find specific transactions based on category, amount, or date.",
+        "The expense categorization feature helps you identify areas where you can cut back on spending.",
+        "The income section of the app lets you input your salary, freelance work, or any other income source.",
+        "If you need to adjust your budget, simply modify the entries under the 'income' or 'expenses' sections.",
+        "The app gives you the flexibility to input recurring expenses, like rent or subscriptions.",
+        "By tracking your spending patterns, you can make informed decisions about your future financial goals.",
+        "To get a clear picture of your finances, generate monthly summaries that show your total income and expenses.",
+        "You can view a breakdown of your expenses by category, making it easy to see where you're spending the most.",
+        "Set a budget for each category and the app will help you stay on track by alerting you if you're nearing your limit.",
+        "You can add notes to each transaction, giving you a more detailed record of your spending.",
+        "The app supports multiple currencies, so you can track your finances no matter where you are.",
+        "The 'Delete Transaction' feature allows you to remove any accidental entries that were incorrectly added.",
+        "By analyzing your spending trends, you can identify opportunities to save more money.",
+        "Use the app to track not only expenses but also your savings goals to see how you're progressing.",
+        "The 'Add Transaction' button allows you to quickly record any new income or expense.",
+        "When you categorize expenses, you can easily generate reports that show how much you're spending in each area.",
+        "The app helps students build good financial habits by tracking their daily expenses and income.",
+        "You can sort transactions by date to view your expenses in chronological order.",
+        "Looking to save? The app helps you set savings goals and track your progress over time.",
+        "The app includes a feature to track one-time purchases, such as textbooks or gadgets, under the 'miscellaneous' category.",
+        "You can filter transactions by date range, allowing you to generate reports for any period.",
+        "By regularly updating your entries, you can ensure your balance always reflects your real-time finances.",
+        "Set recurring reminders for monthly expenses like rent, utilities, or subscriptions so you never forget.",
+        "The app's user-friendly interface makes it easy for students to manage their finances without feeling overwhelmed.",
+        "The 'Transaction History' feature lets you quickly look back at your financial activity.",
+        "Track and compare your expenses month by month to see if you're staying within budget.",
+        "The app also allows you to set financial goals, such as saving for a vacation or paying off debt."
+
     )
 
     Box(
